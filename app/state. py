@@ -1,6 +1,9 @@
 # app/state.py
 import time
 from typing import Optional
+from threading import Lock
+
+STATE_LOCK = Lock()
 
 SYSTEM_STATE = {
     "locked": False,
@@ -8,12 +11,14 @@ SYSTEM_STATE = {
     "reason": None,      # type: Optional[str]
 }
 
-def lock(reason: str) -> None:
-    SYSTEM_STATE["locked"] = True
-    SYSTEM_STATE["locked_at"] = time.time()
-    SYSTEM_STATE["reason"] = reason
+def lock_system(reason: str) -> None:
+    with STATE_LOCK:
+        SYSTEM_STATE["locked"] = True
+        SYSTEM_STATE["locked_at"] = time.time()
+        SYSTEM_STATE["reason"] = reason
 
-def unlock() -> None:
-    SYSTEM_STATE["locked"] = False
-    SYSTEM_STATE["locked_at"] = None
-    SYSTEM_STATE["reason"] = None
+def unlock_system() -> None:
+    with STATE_LOCK:
+        SYSTEM_STATE["locked"] = False
+        SYSTEM_STATE["locked_at"] = None
+        SYSTEM_STATE["reason"] = None
