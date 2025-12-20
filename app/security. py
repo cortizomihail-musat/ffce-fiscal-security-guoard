@@ -1,0 +1,89 @@
+import base64
+import hashlib
+import hmac
+import os
+import time
+import secrets
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class UnlockToken:
+    case_id: str
+    expires_at: int
+    nonce: str
+    sig: str
+
+    def to_string(self) -> str:
+        # token format: case_id.expires_at.nonce.sig
+        return f"{self.case_id}.{self.expires_at}.{self.nonce}.{self.sig}"
+
+
+def _get_secret() -> bytes:
+    """
+    Secret must be provided via env var (never commit it in code).
+    """
+    secret = os.getenv("FFCE_UNLOCK_SECRET", "")
+    if not secret:
+        raise RuntimeError("FFCE_UNLOCK_SECRET is not set")
+    return secret.encode("utf-8")
+
+
+def _b64url(data: bytes) -> str:
+    return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
+
+
+def _sign(payload: str, secret: bytes) -> str:
+    mac = hmac.new(secret, payload.encode("utf-8"), hashlib.sha256).digest()
+    return _b64url(mac)
+
+
+def issue_unlock_token(case_id: str, ttl_seconds: int = 300) -> str:
+    """
+    Mint a time-bound unlock token.
+    """
+    if not case_id or "." in case_id:
+        raise ValueError("case_id must be non-empty and must not contain '.'")
+
+    secret = _get_secret()
+    expires_at = int(time.time()) + int(ttl_seconds)
+    nonce = secrets.token_urlsafe(16)
+
+    payload = f"{case_id}.{expires_at}.{nonce}"
+    sig = _sign(payload, secret)
+
+    return UnlockToken(case_id=case_id, expires_at=expires_at, nonce=nonce, sig=sig).to_string()
+
+
+def parse_unlock_token(token: str) -> UnlockToken:
+    parts = (token or "").split(".")
+    if len(parts) != 4:
+        raise ValueError("Invalid token format")
+    case_id, expires_at_s, nonce, sig = parts
+    if not case_id or not expires_at_s.isdigit() or not nonce or not sig:
+        raise ValueError("Invalid token fields")
+    return UnlockToken(case_id=case_id, expires_at=int(expires_at_s), nonce=nonce, sig=sig)
+
+
+def verify_unlock_token(token: str, expected_case_id: str) -> UnlockToken:
+    """
+    Verify signature + expiry + case_id match. (One-time use handled in state.py)
+    """
+    secret = _get_secret()
+    ut = parse_unlock_token(token)
+
+    if ut.case_id != expected_case_id:
+        raise ValueError("case_id mismatch")
+
+    now = int(time.time())
+    if ut.expires_at < now:
+        raise ValueError("token expired")
+
+    payload = f"{ut.case_id}.{ut.expires_at}.{ut.nonce}"
+    expected_sig = _sign(payload, secret)
+
+    # constant-time compare
+    if not hmac.compare_digest(ut.sig, expected_sig):
+        raise ValueError("bad signature")
+
+    return ut
