@@ -5,7 +5,7 @@ import time
 from typing import Optional, Set
 
 from app.integrity import verify_log
-from app.state import SYSTEM_STATE, lock
+from app.state import SYSTEM_STATE, lock_system
 
 class IntegrityGateMiddleware(BaseHTTPMiddleware):
     """
