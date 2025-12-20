@@ -1,0 +1,19 @@
+# app/state.py
+import time
+from typing import Optional
+
+SYSTEM_STATE = {
+    "locked": False,
+    "locked_at": None,   # type: Optional[float]
+    "reason": None,      # type: Optional[str]
+}
+
+def lock(reason: str) -> None:
+    SYSTEM_STATE["locked"] = True
+    SYSTEM_STATE["locked_at"] = time.time()
+    SYSTEM_STATE["reason"] = reason
+
+def unlock() -> None:
+    SYSTEM_STATE["locked"] = False
+    SYSTEM_STATE["locked_at"] = None
+    SYSTEM_STATE["reason"] = None
