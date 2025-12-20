@@ -3,10 +3,13 @@ import json
 import time
 from pathlib import Path
 
-LOG_FILE = Path("audit_log.jsonl")
+# audit log stored next to this module
+LOG_FILE = Path(__file__).resolve().parent / "audit_log.jsonl"
+
 
 def _hash(data: str) -> str:
     return hashlib.sha256(data.encode("utf-8")).hexdigest()
+
 
 def append_event(event: dict) -> str:
     """
@@ -17,8 +20,9 @@ def append_event(event: dict) -> str:
     prev_hash = "GENESIS"
     if LOG_FILE.exists():
         with LOG_FILE.open("r", encoding="utf-8") as f:
-            last_line = list(f)[-1]
-            prev_hash = json.loads(last_line)["entry_hash"]
+            lines = f.readlines()
+            if lines:
+                prev_hash = json.loads(lines[-1])["entry_hash"]
 
     entry = {
         "timestamp": timestamp,
@@ -33,6 +37,7 @@ def append_event(event: dict) -> str:
         f.write(json.dumps(entry) + "\n")
 
     return entry_hash
+
 
 def verify_log() -> bool:
     """
