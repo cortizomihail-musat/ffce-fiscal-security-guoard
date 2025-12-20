@@ -1,7 +1,9 @@
 from fastapi import FastAPI
 from app.integrity import verify_log
+from app.middleware import IntegrityGateMiddleware
 
 app = FastAPI(title="FFCE FiscalSecurityGuard (MVP)")
+app.add_middleware(IntegrityGateMiddleware)
 
 @app.get("/health")
 def health():
