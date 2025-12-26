@@ -11,16 +11,15 @@ def _hash(data: str) -> str:
     return hashlib.sha256(data.encode("utf-8")).hexdigest()
 
 
-def append_event(event: dict) -> str:
     """
-    Append-only audit log with hash chaining.
-    """
-    timestamp = time.time()
-
-    prev_hash = "GENESIS"
-    if LOG_FILE.exists():
-        with LOG_FILE.open("r", encoding="utf-8") as f:
-            lines = f.readlines()
+        Append-only audit log with hash chaining.
+            """
+                timestamp = time.time()
+                
+                    prev_hash = "GENESIS"
+                        if LOG_FILE.exists():
+                                with LOG_FILE.open("r", encoding="utf-8") as f:
+                                            lines = f.readlines()            lines = f.readlines()(            lines = f.readlines()
             if lines:
                 prev_hash = json.loads(lines[-1])["entry_hash"]
 
@@ -29,16 +28,14 @@ def append_event(event: dict) -> str:
         "event": event,
         "prev_hash": prev_hash,
     }
-
+p
     entry_hash = _hash(json.dumps(entry, sort_keys=True))
     entry["entry_hash"] = entry_hash
 
     with LOG_FILE.open("a", encoding="utf-8") as f:
         f.write(json.dumps(entry) + "\n")
 
-    return entry_hash
-
-
+    retur
 def verify_log() -> bool:
     """
     Verify integrity of the audit log.
